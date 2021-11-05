@@ -1,11 +1,18 @@
 {
     "name": "MQTT",
-    "docs": "https://github.com/exking/udi-mqtt-poly",
+    "docs": "https://github.com/exking/udi-mqtt-pg3",
     "type": "python3",
     "executable": "mqtt-poly.py",
     "install": "install.sh",
     "description": "MQTT NodeServer",
     "notice": "",
+    "logLevel": "INFO",
+    "customParams": {
+      "mqtt_server": "localhost",
+      "mqtt_port": 1883,
+      "mqtt_user": "username",
+      "mqtt_password": "password"
+    },
     "shortPoll": "15",
     "longPoll": "60",
     "credits": [
@@ -14,8 +21,8 @@
             "author": "xKing",
             "version": "0.0.9",
             "date": "January 19, 2021",
-            "source": "https://github.com/exking/udi-mqtt-poly",
-            "license": "https://raw.githubusercontent.com/exking/udi-mqtt-poly/master/LICENSE"
+            "source": "https://github.com/exking/udi-mqtt-pg3",
+            "license": "https://raw.githubusercontent.com/exking/udi-mqtt-pg3/master/LICENSE"
         }
     ]
 }

@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 
-import polyinterface
+import udi_interface
 import sys
 import logging
 import paho.mqtt.client as mqtt
 import json
 import yaml
+import time
 
-LOGGER = polyinterface.LOGGER
+LOGGER = udi_interface.LOGGER
+Custom = udi_interface.Custom
 
 
-class Controller(polyinterface.Controller):
-    def __init__(self, polyglot):
-        super().__init__(polyglot)
+class Controller(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name):
+        super().__init__(polyglot, primary, address, name)
+        self.Parameters = Custom(polyglot, 'customparams')
         self.name = "MQTT Controller"
         self.address = "mqctrl"
         self.primary = self.address
@@ -24,31 +27,39 @@ class Controller(polyinterface.Controller):
         # example: [ {'id': 'sonoff1', 'type': 'switch', 'status_topic': 'stat/sonoff1/power', 'cmd_topic': 'cmnd/sonoff1/power'} ]
         self.status_topics = []
         self.mqttc = None
+        self.valid_configuration = False
 
-    def start(self):
-        # LOGGER.setLevel(logging.INFO)
+        self.poly.subscribe(polyglot.START, self.start, address)
+        self.poly.subscribe(polyglot.CUSTOMPARAMS, self.parameter_handler)
+        # self.poly.subscribe(polyglot.POLL, self.poll)
+        self.poly.subscribe(polyglot.STOP, self.stop)
+
+        self.poly.ready()
+        self.poly.addNode(self)
+
+    def parameter_handler(self, params):
+        self.poly.Notices.clear()
+        self.Parameters.load(params)
         LOGGER.info("Started MQTT controller")
-        if "mqtt_server" in self.polyConfig["customParams"]:
-            self.mqtt_server = self.polyConfig["customParams"]["mqtt_server"]
-        if "mqtt_port" in self.polyConfig["customParams"]:
-            self.mqtt_port = int(self.polyConfig["customParams"]["mqtt_port"])
-        if "mqtt_user" not in self.polyConfig["customParams"]:
+        self.mqtt_server = self.Parameters["mqtt_server"] or 'localhost'
+        self.mqtt_port = int(self.Parameters["mqtt_port"] or 1883)
+        if self.Parameters["mqtt_user"] is None:
             LOGGER.error("mqtt_user must be configured")
             return False
-        if "mqtt_password" not in self.polyConfig["customParams"]:
+        if self.Parameters["mqtt_password"] is None:
             LOGGER.error("mqtt_password must be configured")
             return False
 
-        self.mqtt_user = self.polyConfig["customParams"]["mqtt_user"]
-        self.mqtt_password = self.polyConfig["customParams"]["mqtt_password"]
+        self.mqtt_user = self.Parameters["mqtt_user"]
+        self.mqtt_password = self.Parameters["mqtt_password"]
 
-        if "devfile" in self.polyConfig["customParams"]:
+        if self.Parameters["devfile"] is not None:
             try:
-                f = open(self.polyConfig["customParams"]["devfile"])
+                f = open(self.Parameters["devfile"])
             except Exception as ex:
                 LOGGER.error(
                     "Failed to open {}: {}".format(
-                        self.polyConfig["customParams"]["devfile"], ex
+                        self.Parameters["devfile"], ex
                     )
                 )
                 return False
@@ -58,7 +69,7 @@ class Controller(polyinterface.Controller):
             except Exception as ex:
                 LOGGER.error(
                     "Failed to parse {} content: {}".format(
-                        self.polyConfig["customParams"]["devfile"], ex
+                        self.Parameters["devfile"], ex
                     )
                 )
                 return False
@@ -66,15 +77,15 @@ class Controller(polyinterface.Controller):
             if "devices" not in data:
                 LOGGER.error(
                     "Manual discovery file {} is missing bulbs section".format(
-                        self.polyConfig["customParams"]["devfile"]
+                        self.Parameters["devfile"]
                     )
                 )
                 return False
             self.devlist = data["devices"]
 
-        elif "devlist" in self.polyConfig["customParams"]:
+        elif self.Parameters["devlist"] is not None:
             try:
-                self.devlist = json.loads(self.polyConfig["customParams"]["devlist"])
+                self.devlist = json.loads(self.Parameters["devlist"])
             except Exception as ex:
                 LOGGER.error("Failed to parse the devlist: {}".format(ex))
                 return False
@@ -82,11 +93,7 @@ class Controller(polyinterface.Controller):
             LOGGER.error("devlist must be configured")
             return False
 
-        self.mqttc = mqtt.Client()
-        self.mqttc.on_connect = self._on_connect
-        self.mqttc.on_disconnect = self._on_disconnect
-        self.mqttc.on_message = self._on_message
-        self.mqttc.is_connected = False
+        self.valid_configuration = True
 
         for dev in self.devlist:
             if (
@@ -103,68 +110,84 @@ class Controller(polyinterface.Controller):
                 name = dev["id"]
             address = dev["id"].lower().replace("_", "")[:14]
             if dev["type"] == "switch":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQSwitch(self, self.address, address, name, dev))
+                    self.poly.addNode(MQSwitch(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "sensor":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQSensor(self, self.address, address, name, dev))
+                    self.poly.addNode(MQSensor(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "flag":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQFlag(self, self.address, address, name, dev))
+                    self.poly.addNode(MQFlag(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "TempHumid":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQdht(self, self.address, address, name, dev))
+                    self.poly.addNode(MQdht(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "Temp":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQds(self, self.address, address, name, dev))
+                    self.poly.addNode(MQds(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "TempHumidPress":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQbme(self, self.address, address, name, dev))
+                    self.poly.addNode(MQbme(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "distance":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQhcsr(self, self.address, address, name, dev))
+                    self.poly.addNode(MQhcsr(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "analog":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQAnalog(self, self.address, address, name, dev))
+                    self.poly.addNode(MQAnalog(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "s31":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQs31(self, self.address, address, name, dev))
+                    self.poly.addNode(MQs31(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "raw":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQraw(self, self.address, address, name, dev))
+                    self.poly.addNode(MQraw(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "RGBW":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQRGBWstrip(self, self.address, address, name, dev))
+                    self.poly.addNode(MQRGBWstrip(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             elif dev["type"] == "ifan":
-                if not address is self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.addNode(MQFan(self, self.address, address, name, dev))
+                    self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
                     self.status_topics.append(dev["status_topic"])
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
+
+        return True
+
+    def start(self):
+        while self.valid_configuration is False:
+            LOGGER.info('Waiting on valid configuration')
+            time.sleep(5)
+        polyglot.updateProfile()
+        self.poly.setCustomParamsDoc()
+
+        self.mqttc = mqtt.Client()
+        self.mqttc.on_connect = self._on_connect
+        self.mqttc.on_disconnect = self._on_disconnect
+        self.mqttc.on_message = self._on_message
+        self.mqttc.is_connected = False
+
         self.mqttc.username_pw_set(self.mqtt_user, self.mqtt_password)
         try:
             self.mqttc.connect(self.mqtt_server, self.mqtt_port, 10)
@@ -173,7 +196,7 @@ class Controller(polyinterface.Controller):
             LOGGER.error("Error connecting to Poly MQTT broker {}".format(ex))
             return False
 
-        return True
+        LOGGER.info("Start")
 
     def _on_connect(self, mqttc, userdata, flags, rc):
         if rc == 0:
@@ -193,9 +216,9 @@ class Controller(polyinterface.Controller):
                             topic, mid, result
                         )
                     )
-            for node in self.nodes:
-                if self.nodes[node].address != self.address:
-                    self.nodes[node].query()
+            for node in self.poly.getNodes():
+                if node != self.address:
+                    self.poly.getNode(node).query()
         else:
             LOGGER.error("Poly MQTT Connect failed")
 
@@ -216,7 +239,7 @@ class Controller(polyinterface.Controller):
         payload = message.payload.decode("utf-8")
         LOGGER.debug("Received {} from {}".format(payload, topic))
         try:
-            self.nodes[self._dev_by_topic(topic)].updateInfo(payload)
+            self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
@@ -230,16 +253,15 @@ class Controller(polyinterface.Controller):
         self.mqttc.publish(topic, message, retain=False)
 
     def stop(self):
+        if self.mqttc is None:
+            return
         self.mqttc.loop_stop()
         self.mqttc.disconnect()
         LOGGER.info("MQTT is stopping")
 
-    def updateInfo(self):
-        pass
-
     def query(self, command=None):
-        for node in self.nodes:
-            self.nodes[node].reportDrivers()
+        for node in self.poly.getNodes:
+            node.reportDrivers()
 
     def discover(self, command=None):
         pass
@@ -249,14 +271,12 @@ class Controller(polyinterface.Controller):
     drivers = [{"driver": "ST", "value": 1, "uom": 2}]
 
 
-class MQSwitch(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQSwitch(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
         self.on = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         if payload == "ON":
@@ -291,14 +311,12 @@ class MQSwitch(polyinterface.Node):
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off}
 
 
-class MQFan(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQFan(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
         self.fan_speed = 0
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -350,15 +368,13 @@ class MQFan(polyinterface.Node):
     commands = {"QUERY": query, "DON": set_on, "DOF": set_off, "FDUP": speed_up, "FDDOWN": speed_down}
 
 
-class MQSensor(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQSensor(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
         self.on = False
         self.motion = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -486,13 +502,11 @@ class MQSensor(polyinterface.Node):
     # example condition: IOT devices sensor connections {OK, NOK, ERR(OR)}
 
 
-class MQFlag(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQFlag(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         if payload == "OK":
@@ -543,13 +557,10 @@ class MQFlag(polyinterface.Node):
 # any of the following, since they I believe they get identified by tomaso the same:
 # DHT21, AM2301, AM2302, AM2321
 # Should be easy to add other temp/humdity sensors.
-class MQdht(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQdht(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
         self.on = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -582,9 +593,9 @@ class MQdht(polyinterface.Node):
 
 # This class is an attempt to add support for temperature only sensors.
 # was made for DS18B20 waterproof
-class MQds(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQds(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
         self.on = False
 
     def start(self):
@@ -619,13 +630,10 @@ class MQds(polyinterface.Node):
 
 # This class is an attempt to add support for temperature/humidity/pressure sensors.
 # Currently supports the BME280.  Could be extended to accept others.
-class MQbme(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQbme(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
         self.on = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -665,13 +673,10 @@ class MQbme(polyinterface.Node):
 
 # This class is an attempt to add support for HC-SR04 Ultrasonic Sensor.
 # Returns distance in centimeters.
-class MQhcsr(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQhcsr(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
         self.on = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -704,13 +709,10 @@ class MQhcsr(polyinterface.Node):
 # General purpose Analog input using ADC.
 # Setting max value in editor.xml as 1024, as that would be the max for
 # onboard ADC, but that might need to be changed for external ADCs.
-class MQAnalog(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQAnalog(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
         self.on = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -743,13 +745,10 @@ class MQAnalog(polyinterface.Node):
 
 
 # Reading the telemetry data for a Sonoff S31 (use the switch for control)
-class MQs31(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQs31(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
         self.on = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -786,14 +785,11 @@ class MQs31(polyinterface.Node):
     commands = {"QUERY": query}
 
 
-class MQraw(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQraw(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
         self.cmd_topic = device["cmd_topic"]
         self.on = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -816,15 +812,13 @@ class MQraw(polyinterface.Node):
 
 # Class for an RGBW strip powered through a microController running MQTT client
 # able to set colours and run different transition programs
-class MQRGBWstrip(polyinterface.Node):
-    def __init__(self, controller, primary, address, name, device):
-        super().__init__(controller, primary, address, name)
+class MQRGBWstrip(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
         self.on = False
         self.motion = False
-
-    def start(self):
-        pass
 
     def updateInfo(self, payload):
         try:
@@ -908,9 +902,9 @@ class MQRGBWstrip(polyinterface.Node):
 
 if __name__ == "__main__":
     try:
-        polyglot = polyinterface.Interface("MQTT")
+        polyglot = udi_interface.Interface([])
         polyglot.start()
-        control = Controller(polyglot)
-        control.runForever()
+        Controller(polyglot, 'mqctrl', 'mqctrl', 'MQTT')
+        polyglot.runForever()
     except (KeyboardInterrupt, SystemExit):
         sys.exit(0)

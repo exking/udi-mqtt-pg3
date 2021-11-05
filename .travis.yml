@@ -1,9 +1,0 @@
-language:
-- python
-python:
-- '3.6'
-script:
-- "./mqtt-poly.py"
-notifications:
-  slack:
-    secure: XUl+PRM9hLgCydIeBEPtce1GTxLC5TKxm/q6KvszE84PelPHXcqt45d36feaMq3WN/kyprsYOrpsEAu8jv3iiY78O6VBgssXd41Nav560zYZokyP7qE4SB3nLLXDUqRZ+sG6Rxr/15b2xeNsW+8P9f2ey6rQMdW4MdwUAEm4Xl64ddC9/1lCVfJv9fug+Ppi8Gdhw56D3f3gNCrZirPVlUsG8iPTzvgul+IRi8STAO7C8hVSSMMZphUay5D5rtU6NT5k0mUQHUBLyVOo35uYMRoYcM5e6ylXknjid7NdRdoWJnXsWJ7FVsDxrFUhAYU3s2KkPV3uF8qX7mjtyolEWZxciKUkO01YPlgFcYqCz859s8rAMeCiGG6FUR8e4yEGA9XRQqZ9nlkwSA+DC+jxW//pUw/b+us0w9l4WGL+YWiIvppGJ3Y/dh2aAn++JM0SzwVyl21/ZoXLrCDqg1umNlkooidzvhrUWWSXaHgNp60c52n7LfPjX5suPyAMrM4LxElJeH4PIefrEuXBHThrR6LIXiVPf5vru3vZ/6VrNbjZ9FeMxgAuqcdl5+4LWod+oFA9pwq4vZ4GRzqS9Guz04MHMg52nCscPXqo4i7l8PDIU/gUOB4PR8lZXi7Jkyo2yGJ5eiE19SCDUZ7jKtehI2ne6XL30xALBIgR70i8iQM=
