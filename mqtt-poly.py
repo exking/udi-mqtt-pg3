@@ -260,7 +260,7 @@ class Controller(udi_interface.Node):
         LOGGER.info("MQTT is stopping")
 
     def query(self, command=None):
-        for node in self.poly.getNodes:
+        for node in self.poly.getNodes().values():
             node.reportDrivers()
 
     def discover(self, command=None):
