@@ -721,6 +721,9 @@ class MQhcsr(udi_interface.Node):
     commands = {"QUERY": query}
 
 
+# Adding support for the Shelly Flood class of devices. Notably, Shellies publish their statuses on multiple
+# single-value topics, rather than a single topic with a JSON object for the status. You will need to pass
+# an array for the status_topic value in the JSON definition; see the POLYGLOT_CONFIG.md for details.
 class ShellyFlood(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
