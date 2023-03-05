@@ -113,9 +113,9 @@ class Controller(udi_interface.Node):
                 name = dev["id"]
             address = Controller._get_device_address(dev)
             if dev["type"] == "shellyflood":
-                if not address in self.nodes:
+                if not self.poly.getNode(address):
                     LOGGER.info(f"Adding {dev['type']} {name}")
-                    self.addNode(ShellyFlood(self, address, address, name, dev))
+                    self.poly.addNode(ShellyFlood(self.poly, self.address, address, name, dev))
                     status_topics = dev["status_topic"]
                     self._add_status_topics(dev, status_topics)
             elif dev["type"] == "switch":
