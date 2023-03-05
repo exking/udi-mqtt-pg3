@@ -81,6 +81,16 @@ ND-MQHCSR-ICON = Input
 ST-SR04-DISTANC-NAME = Distance
 ST-SR04-ST-NAME = Status
 
+# Shelly Flood
+ND-SHFLOOD-NAME = MQTT Shelly Flood
+ND-SHFLOOD-ICON = TempSensor
+CMD-FLOOD-QUERY-NAME = Query
+ST-FLOOD-CLITEMP-NAME = Temperature
+ST-FLOOD-GV0-NAME = Leak Detected
+ST-FLOOD-BATLVL-NAME = Battery Level
+ST-FLOOD-GPV-NAME = Error Code
+ST-FLOOD-ST-NAME = Status
+
 # analog
 ND-MQANAL-NAME = MQTT Analog
 ND-MQANAL-ICON = Input
