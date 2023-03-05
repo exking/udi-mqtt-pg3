@@ -111,7 +111,7 @@ class Controller(udi_interface.Node):
                 name = dev["name"]
             else:
                 name = dev["id"]
-            address = dev["id"].lower().replace("_", "")[:14]
+            address = Controller._get_device_address(dev)
             if dev["type"] == "shellyflood":
                 if not address in self.nodes:
                     LOGGER.info(f"Adding {dev['type']} {name}")
