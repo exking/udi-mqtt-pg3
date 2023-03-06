@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from typing import Dict, List
 
 import udi_interface
 import sys
@@ -26,6 +27,8 @@ class Controller(udi_interface.Node):
         self.devlist = None
         # example: [ {'id': 'sonoff1', 'type': 'switch', 'status_topic': 'stat/sonoff1/power', 'cmd_topic': 'cmnd/sonoff1/power'} ]
         self.status_topics = []
+        # Maps to device IDs
+        self.status_topics_to_devices: Dict[str, str] = {}
         self.mqttc = None
         self.valid_configuration = False
 
@@ -108,67 +111,73 @@ class Controller(udi_interface.Node):
                 name = dev["name"]
             else:
                 name = dev["id"]
-            address = dev["id"].lower().replace("_", "")[:14]
-            if dev["type"] == "switch":
+            address = Controller._get_device_address(dev)
+            if dev["type"] == "shellyflood":
+                if not self.poly.getNode(address):
+                    LOGGER.info(f"Adding {dev['type']} {name}")
+                    self.poly.addNode(ShellyFlood(self.poly, self.address, address, name, dev))
+                    status_topics = dev["status_topic"]
+                    self._add_status_topics(dev, status_topics)
+            elif dev["type"] == "switch":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQSwitch(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "sensor":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQSensor(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "flag":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQFlag(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "TempHumid":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQdht(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "Temp":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQds(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "TempHumidPress":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQbme(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "distance":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQhcsr(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "analog":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQAnalog(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "s31":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQs31(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "raw":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQraw(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "RGBW":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQRGBWstrip(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             elif dev["type"] == "ifan":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
-                    self.status_topics.append(dev["status_topic"])
+                    self._add_status_topics(dev, [dev["status_topic"]])
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
@@ -197,6 +206,11 @@ class Controller(udi_interface.Node):
             return False
 
         LOGGER.info("Start")
+
+    def _add_status_topics(self, dev, status_topics: List[str]):
+        for status_topic in status_topics:
+            self.status_topics.append(status_topic)
+            self.status_topics_to_devices[status_topic] = Controller._get_device_address(dev)
 
     def _on_connect(self, mqttc, userdata, flags, rc):
         if rc == 0:
@@ -244,10 +258,11 @@ class Controller(udi_interface.Node):
             LOGGER.error("Failed to process message {}".format(ex))
 
     def _dev_by_topic(self, topic):
-        for dev in self.devlist:
-            if dev["status_topic"] == topic:
-                return dev["id"].lower()[:14]
-        return None
+        return self.status_topics_to_devices.get(topic, None)
+
+    @staticmethod
+    def _get_device_address(dev) -> str:
+        return dev["id"].lower().replace("_", "").replace("-", "_")[:14]
 
     def mqtt_pub(self, topic, message):
         self.mqttc.publish(topic, message, retain=False)
@@ -278,7 +293,7 @@ class MQSwitch(udi_interface.Node):
         self.cmd_topic = device["cmd_topic"]
         self.on = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         if payload == "ON":
             if not self.on:
                 self.reportCmd("DON")
@@ -318,7 +333,7 @@ class MQFan(udi_interface.Node):
         self.cmd_topic = device["cmd_topic"]
         self.fan_speed = 0
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             json_payload = json.loads(payload)
             fan_speed = int(json_payload['FanSpeed'])
@@ -376,7 +391,7 @@ class MQSensor(udi_interface.Node):
         self.on = False
         self.motion = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
@@ -508,7 +523,7 @@ class MQFlag(udi_interface.Node):
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"]
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         if payload == "OK":
             self.setDriver("ST", 0)
         elif payload == "NOK":
@@ -562,7 +577,7 @@ class MQdht(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.on = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
@@ -601,7 +616,7 @@ class MQds(udi_interface.Node):
     def start(self):
         pass
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
@@ -635,7 +650,7 @@ class MQbme(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.on = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
@@ -678,7 +693,7 @@ class MQhcsr(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.on = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
@@ -706,6 +721,62 @@ class MQhcsr(udi_interface.Node):
     commands = {"QUERY": query}
 
 
+# Adding support for the Shelly Flood class of devices. Notably, Shellies publish their statuses on multiple
+# single-value topics, rather than a single topic with a JSON object for the status. You will need to pass
+# an array for the status_topic value in the JSON definition; see the POLYGLOT_CONFIG.md for details.
+class ShellyFlood(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.on = False
+        self.device = device
+
+    def start(self):
+        return True
+
+    def updateInfo(self, payload, topic: str):
+        LOGGER.debug(f"Attempting to handle message for Shelly on topic {topic} with payload {payload}")
+        topic_suffix = topic.split('/')[-1]
+        self.setDriver("ST", 1)
+        if topic_suffix == "temperature":
+            self.setDriver("CLITEMP", payload)
+        elif topic_suffix == "flood":
+            value = payload == "true"
+            self.setDriver("GV0", value)
+        elif topic_suffix == "battery":
+            self.setDriver("BATLVL", payload)
+        elif topic_suffix == "error":
+            self.setDriver("GPV", payload)
+        else:
+            LOGGER.warn(f"Unable to handle data for topic {topic}")
+
+    def query(self, command=None):
+        self.reportDrivers()
+
+    # UOMs of interest:
+    # 17 = degrees F (temp)
+    # 2 = boolean (flood)
+    # 51 = percent (battery)
+    # 56 = raw value from device (error)
+
+    # Driver controls of interest:
+    # BATLVL = battery level
+    # CLITEMP = current temperature
+    # GPV = general purpose value
+    # GV0 = custom control 0
+
+    drivers = [
+        {"driver": "ST", "value": 0, "uom": 2},
+        {"driver": "CLITEMP", "value": 0, "uom": 17}, # Temperature sensor
+        {"driver": "GV0", "value": 0, "uom": 2}, # flood or not
+        {"driver": "BATLVL", "value": 0, "uom": 51}, # battery level indicator
+        {"driver": "GPV", "value": 0, "uom": 56}, # error code
+    ]
+
+    id = "SHFLOOD"
+
+    commands = {"QUERY", query}
+
+
 # General purpose Analog input using ADC.
 # Setting max value in editor.xml as 1024, as that would be the max for
 # onboard ADC, but that might need to be changed for external ADCs.
@@ -714,7 +785,7 @@ class MQAnalog(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.on = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
@@ -750,7 +821,7 @@ class MQs31(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.on = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:
@@ -791,7 +862,7 @@ class MQraw(udi_interface.Node):
         self.cmd_topic = device["cmd_topic"]
         self.on = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             self.setDriver("ST", 1)
             self.setDriver("GV1", int(payload))
@@ -820,7 +891,7 @@ class MQRGBWstrip(udi_interface.Node):
         self.on = False
         self.motion = False
 
-    def updateInfo(self, payload):
+    def updateInfo(self, payload, topic: str):
         try:
             data = json.loads(payload)
         except Exception as ex:

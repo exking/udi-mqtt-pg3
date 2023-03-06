@@ -50,4 +50,7 @@
     <editor id="ST_FAN">
         <range uom="25" subset="0-3" nls="FANSPEED" />
     </editor>
+    <editor id="BATTERY">
+        <range uom="51" min="0" max="100" prec="0" />
+    </editor>
 </editors>
