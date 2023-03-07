@@ -253,7 +253,7 @@ class Controller(udi_interface.Node):
         payload = message.payload.decode("utf-8")
         LOGGER.debug("Received {} from {}".format(payload, topic))
         try:
-            self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload)
+            self.poly.getNode(self._dev_by_topic(topic)).updateInfo(payload, topic)
         except Exception as ex:
             LOGGER.error("Failed to process message {}".format(ex))
 
