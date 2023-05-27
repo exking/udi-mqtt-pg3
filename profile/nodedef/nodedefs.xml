@@ -142,7 +142,7 @@
         <editors />
         <sts>
             <st id="ST" editor="BOOL" />
-            <st id="GPV" editor="VALUE" />
+            <st id="GPV" editor="ANALOG" />
         </sts>
         <cmds>
             <sends />
@@ -235,7 +235,7 @@
             <st id="CLITEMP" editor="TEMPF" />
             <st id="GV0" editor="BOOL" />
             <st id="BATLVL" editor="BATTERY" />
-            <st id="GPV" editor="VALUE" />
+            <st id="GPV" editor="ANALOG" />
         </sts>
         <cmds>
             <sends />
