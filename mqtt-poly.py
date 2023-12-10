@@ -178,6 +178,11 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+            elif dev["type"] == "ratgdo":
+                if not self.poly.getNode(address):
+                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                    self.poly.addNode(MQRatgdo(self.poly, self.address, address, name, dev))
+                    self._add_status_topics(dev, [dev["status_topic"]])
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
@@ -969,6 +974,71 @@ class MQRGBWstrip(udi_interface.Node):
     id = "MQRGBW"
 
     commands = {"QUERY": query, "DON": led_on, "DOF": led_off, "SETRGBW": rgbw_set}
+
+# Class for Ratgdo Garage door opener for MYQ replacement
+# Able to control door, light, lock and get status of same as well as motion, obstruction
+class MQRATGDO(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
+        self.cmd_topic = device["cmd_topic"]
+        self.on = False
+        self.motion = False
+
+    def updateInfo(self, payload, topic: str):
+        try:
+            data = json.loads(payload)
+        except Exception as ex:
+            LOGGER.error(
+                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
+            )
+            return False
+        if "motion" in data:
+            self.setDriver("MOTION", 1 if (data[motion] == "detected") else 0)
+        if "availability" in data:
+            self.setDriver("AVAILABILITY", 1 if (data[availability] == "online") else 0)
+        if "obstruction" in data:
+            self.setDriver("OBSTRUCTION", 1 if (data[obstruction] == "detected") else 0)
+        if "light" in data:
+            self.setDriver("LIGHT", 1 if (data[light] == "on") else 0)
+        if "door" in data:
+            self.setDriver("DOOR", 1 if (data[door] == "open") else 0)
+        if "lock" in data:
+            self.setDriver("LOCK", 1 if (data[motion] == "locked") else 0)
+
+    def lt_on(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, json.dumps({"light": "on"}))
+
+    def lt_off(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, json.dumps({"light": "off"}))
+
+    def dr_open(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, json.dumps({"door": "open"}))
+
+    def dr_close(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, json.dumps({"door": "close"}))
+
+    def lk_lock(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, json.dumps({"lock": "lock"}))
+
+    def lk_unlock(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, json.dumps({"lock": "unlock"}))
+
+    def query(self, command=None):
+        self.reportDrivers()
+
+    drivers = [
+        {"driver": "MOTION", "value": 0, "uom": 2},
+        {"driver": "AVAILABILITY", "value": 0, "uom": 2},
+        {"driver": "OBSTRUCTION", "value": 0, "uom": 2},
+        {"driver": "LIGHT", "value": 0, "uom": 2},
+        {"driver": "DOOR", "value": 0, "uom": 2},
+        {"driver": "DOCK", "value": 0, "uom": 2},
+    ]
+
+    id = "MQRATGDO"
+
+    commands = {"QUERY": query, "DON": lt_on, "DOF": lt_off, "OPEN" : dr_open, "CLOSE" : dr_close, "LOCK" : lk_lock, "UNLOCK" : lk_unlock}
 
 
 if __name__ == "__main__":

@@ -244,4 +244,34 @@
             </accepts>
         </cmds>
     </nodeDef>
+    <nodeDef id="MQRATGDO" nls="RATGDO">
+        <editors />
+        <sts>
+            <st id="MOTION" editor="BOOL" />
+            <st id="AVAILABILITY" editor="BOOL" />
+            <st id="OBSTRUCTION" editor="BOOL" />
+            <st id="LIGHT" editor="ONOFF" />
+            <st id="DOOR" editor="BOOL" />
+            <st id="LOCK" editor="BOOL" />
+        </sts>
+        <cmds>
+            <sends>
+                <cmd id="DON" />
+                <cmd id="DOF" />
+                <cmd id="OPEN" />
+                <cmd id="CLOSE" />
+                <cmd id="LOCK" />
+                <cmd id="UNLOCK" />
+            </sends>
+            <accepts>
+                <cmd id="QUERY" />
+                <cmd id="DON" />
+                <cmd id="DOF" />
+                <cmd id="OPEN" />
+                <cmd id="CLOSE" />
+                <cmd id="LOCK" />
+                <cmd id="UNLOCK" />
+            </accepts>
+        </cmds>
+    </nodeDef>
 </nodeDefs>
