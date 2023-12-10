@@ -174,8 +174,34 @@ CMD-RATGDO-LIGHT-DOF-NAME = Off
 CMD-RATGDO-DOOR-OPEN-NAME = Open
 CMD-RATGDO-DOOR-CLOSE-NAME = Close
 
-CMD-RATGDO-LOCK-LOCK-NAME = Lock
-CMD-RATGDO-LOCK-UNLOCK-NAME = Unlock
+ST-RATGDO-GV1-NAME = Door
+
+ST-RATGDO-GV2-NAME = Motion
+
+ST-RATGDO-GV3-NAME = Lock
+
+ST-RATGDO-GV4-NAME = Obstruction
+
+GONLINE-0 = Offline
+GONLINE-1 = Online
+
+GLHT-0 = Off
+GLHT-1 = On
+
+GDOOR-0 = Closed
+GDOOR-1 = Open
+GDOOR-2 = Opening
+GDOOR-3 = Stopped
+GDOOR-4 = Closing
+
+GMOTION-0 = Undetected
+GMOTION-1 = Detected
+
+GOBST-0 = Unobstructed
+GOBST-1 = Obstructed
+
+GLOCK-0 = Unlocked
+GLOCK-1 = Locked
 
 ST-RATGDO-MOTION-NAME = Motion
 ST-RATGDO-AVAILABILITY-NAME = Availability

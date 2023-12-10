@@ -53,4 +53,22 @@
     <editor id="BATTERY">
         <range uom="51" min="0" max="100" prec="0" />
     </editor>
+    <editor id="GONLINE">
+        <range uom="2" subset="0,1" nls="GONLINE" />
+    </editor>
+    <editor id="GLHT">
+        <range uom="2" subset="0,1" nls="GLHT" />
+    </editor>
+    <editor id="GDOOR">
+        <range uom="25" subset="0,1,2,3,4" nls="GDOOR" />
+    </editor>
+    <editor id="GMOTION">
+        <range uom="2" subset="0,1" nls="GMOTION" />
+    </editor>
+    <editor id="GLOCK">
+        <range uom="2" subset="0,1" nls="GLOCK" />
+    </editor>
+    <editor id="GOBST">
+        <range uom="2" subset="0,1" nls="GOBST" />
+    </editor>
 </editors>

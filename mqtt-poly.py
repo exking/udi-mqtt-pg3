@@ -977,7 +977,7 @@ class MQRGBWstrip(udi_interface.Node):
 
 # Class for Ratgdo Garage door opener for MYQ replacement
 # Able to control door, light, lock and get status of same as well as motion, obstruction
-class MQRATGDO(udi_interface.Node):
+class MQratgdo(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
@@ -986,25 +986,36 @@ class MQRATGDO(udi_interface.Node):
         self.motion = False
 
     def updateInfo(self, payload, topic: str):
-        try:
-            data = json.loads(payload)
-        except Exception as ex:
-            LOGGER.error(
-                "Failed to parse MQTT Payload as Json: {} {}".format(ex, payload)
-            )
-            return False
-        if "motion" in data:
-            self.setDriver("MOTION", 1 if (data[motion] == "detected") else 0)
-        if "availability" in data:
-            self.setDriver("AVAILABILITY", 1 if (data[availability] == "online") else 0)
-        if "obstruction" in data:
-            self.setDriver("OBSTRUCTION", 1 if (data[obstruction] == "detected") else 0)
-        if "light" in data:
-            self.setDriver("LIGHT", 1 if (data[light] == "on") else 0)
-        if "door" in data:
-            self.setDriver("DOOR", 1 if (data[door] == "open") else 0)
-        if "lock" in data:
-            self.setDriver("LOCK", 1 if (data[motion] == "locked") else 0)
+        topic_suffix = topic.split('/')[-1]
+        if topic_suffix == "availability":
+            value = int( payload == "online" )
+            self.setDriver("ST", value)
+        elif topic_suffix == "light":
+            value = int( payload == "on" )
+            self.setDriver("GV0", value)
+        elif topic_suffix == "door":
+            if payload == "open":
+                value = 1
+            elif payload == "opening":
+                value = 2
+            elif payload == "stopped":
+                value = 3
+            elif payload == "closing":
+                value = 4
+            else:
+                value = 0
+            self.setDriver("GV1", value)
+        elif topic_suffix == "motion":
+            value = int( payload == "detected" )
+            self.setDriver("GV2", value)
+        elif topic_suffix == "lock":
+            value = int( payload == "locked" )
+            self.setDriver("GV3", value)
+        elif topic_suffix == "obstruction":
+            value = int( payload == "obstructed" )
+            self.setDriver("GV4", value)
+        else:
+            LOGGER.warn(f"Unable to handle data for topic {topic}")
 
     def lt_on(self, command):
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"light": "on"}))
