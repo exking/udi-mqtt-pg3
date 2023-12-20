@@ -247,12 +247,12 @@
     <nodeDef id="MQRATGDO" nls="RATGDO">
         <editors />
         <sts>
-            <st id="MOTION" editor="BOOL" />
-            <st id="AVAILABILITY" editor="BOOL" />
-            <st id="OBSTRUCTION" editor="BOOL" />
-            <st id="LIGHT" editor="ONOFF" />
-            <st id="DOOR" editor="BOOL" />
-            <st id="LOCK" editor="BOOL" />
+            <st id="ST" editor="GAVAIL" />
+            <st id="GV0" editor="GLIGHT" />
+            <st id="GV1" editor="GDOOR" />
+            <st id="GV2" editor="GMOTION" />
+            <st id="GV3" editor="GLOCK" />
+            <st id="GV4" editor="GOBST" />
         </sts>
         <cmds>
             <sends>
@@ -260,6 +260,7 @@
                 <cmd id="DOF" />
                 <cmd id="OPEN" />
                 <cmd id="CLOSE" />
+                <cmd id="STOP" />
                 <cmd id="LOCK" />
                 <cmd id="UNLOCK" />
             </sends>
@@ -269,6 +270,7 @@
                 <cmd id="DOF" />
                 <cmd id="OPEN" />
                 <cmd id="CLOSE" />
+                <cmd id="STOP" />
                 <cmd id="LOCK" />
                 <cmd id="UNLOCK" />
             </accepts>

@@ -182,7 +182,14 @@ class Controller(udi_interface.Node):
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQRatgdo(self.poly, self.address, address, name, dev))
-                    self._add_status_topics(dev, [dev["status_topic"]])
+                    status_topics_base = [dev["status_topic"]]
+                    status_topics = [status_topics_base + "/availability",
+                                     status_topics_base + "/light",
+                                     status_topics_base + "/door",
+                                     status_topics_base + "/motion",
+                                     status_topics_base + "/lock",
+                                     status_topics_base + "/obstruction"]
+                    self._add_status_topics(dev, status_topics)
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
@@ -1029,6 +1036,9 @@ class MQratgdo(udi_interface.Node):
     def dr_close(self, command):
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"door": "close"}))
 
+    def dr_stop(self, command):
+        self.controller.mqtt_pub(self.cmd_topic, json.dumps({"door": "stop"}))
+
     def lk_lock(self, command):
         self.controller.mqtt_pub(self.cmd_topic, json.dumps({"lock": "lock"}))
 
@@ -1039,17 +1049,17 @@ class MQratgdo(udi_interface.Node):
         self.reportDrivers()
 
     drivers = [
-        {"driver": "MOTION", "value": 0, "uom": 2},
-        {"driver": "AVAILABILITY", "value": 0, "uom": 2},
-        {"driver": "OBSTRUCTION", "value": 0, "uom": 2},
-        {"driver": "LIGHT", "value": 0, "uom": 2},
-        {"driver": "DOOR", "value": 0, "uom": 2},
-        {"driver": "DOCK", "value": 0, "uom": 2},
+        {"driver": "ST", "value": 0, "uom": 2},
+        {"driver": "GV0", "value": 0, "uom": 2},
+        {"driver": "GV1", "value": 0, "uom": 25},
+        {"driver": "GV2", "value": 0, "uom": 2},
+        {"driver": "GV3", "value": 0, "uom": 2},
+        {"driver": "GV4", "value": 0, "uom": 2},
     ]
 
     id = "MQRATGDO"
 
-    commands = {"QUERY": query, "DON": lt_on, "DOF": lt_off, "OPEN" : dr_open, "CLOSE" : dr_close, "LOCK" : lk_lock, "UNLOCK" : lk_unlock}
+    commands = {"QUERY": query, "DON": lt_on, "DOF": lt_off, "OPEN" : dr_open, "CLOSE" : dr_close, "STOP" : dr_stop, "LOCK" : lk_lock, "UNLOCK" : lk_unlock}
 
 
 if __name__ == "__main__":
