@@ -182,13 +182,13 @@ class Controller(udi_interface.Node):
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQRatgdo(self.poly, self.address, address, name, dev))
-                    status_topics_base = [dev["status_topic"]]
-                    status_topics = [status_topics_base + "/availability",
-                                     status_topics_base + "/light",
-                                     status_topics_base + "/door",
-                                     status_topics_base + "/motion",
-                                     status_topics_base + "/lock",
-                                     status_topics_base + "/obstruction"]
+                    status_topics_base = [dev["status_topic"]] + "/status/"
+                    status_topics = [status_topics_base + "availability",
+                                     status_topics_base + "light",
+                                     status_topics_base + "door",
+                                     status_topics_base + "motion",
+                                     status_topics_base + "lock",
+                                     status_topics_base + "obstruction"]
                     self._add_status_topics(dev, status_topics)
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
@@ -988,7 +988,7 @@ class MQratgdo(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.cmd_topic = device["cmd_topic"]
+        self.cmd_topic = device["cmd_topic"] + "/command"
         self.on = False
         self.motion = False
 
