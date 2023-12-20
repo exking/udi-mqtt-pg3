@@ -181,7 +181,7 @@ class Controller(udi_interface.Node):
             elif dev["type"] == "ratgdo":
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
-                    self.poly.addNode(MQRatgdo(self.poly, self.address, address, name, dev))
+                    self.poly.addNode(MQratgdo(self.poly, self.address, address, name, dev))
                     status_topics_base = [dev["status_topic"]] + "/status/"
                     status_topics = [status_topics_base + "availability",
                                      status_topics_base + "light",
