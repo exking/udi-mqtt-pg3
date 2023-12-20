@@ -19,7 +19,7 @@
         {
             "title": "NodeServer to integrate with MQTT Broker",
             "author": "xKing",
-            "version": "0.0.11",
+            "version": "0.0.10",
             "date": "January 19, 2021",
             "source": "https://github.com/exking/udi-mqtt-pg3",
             "license": "https://raw.githubusercontent.com/exking/udi-mqtt-pg3/master/LICENSE"

@@ -185,8 +185,8 @@ ST-RATGDO-GV4-NAME = Obstruction
 GONLINE-0 = Offline
 GONLINE-1 = Online
 
-GLHT-0 = Off
-GLHT-1 = On
+GLIGHT-0 = Off
+GLIGHT-1 = On
 
 GDOOR-0 = Closed
 GDOOR-1 = Open
