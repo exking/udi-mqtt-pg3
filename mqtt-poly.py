@@ -1025,10 +1025,10 @@ class MQratgdo(udi_interface.Node):
             LOGGER.warn(f"Unable to handle data for topic {topic}")
 
     def lt_on(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "/light/on")
+        self.controller.mqtt_pub(self.cmd_topic, [ "light", "on" ])
 
     def lt_off(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "/light/off")
+        self.controller.mqtt_pub(self.cmd_topic, [ "light", "off" ])
 
     def dr_open(self, command):
         self.controller.mqtt_pub(self.cmd_topic, "/door/open")
