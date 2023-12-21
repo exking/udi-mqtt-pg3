@@ -197,7 +197,7 @@ GDOOR-2 = Opening
 GDOOR-3 = Stopped
 GDOOR-4 = Closing
 
-GMOTION-0 = Undetected
+GMOTION-0 = Clear
 GMOTION-1 = Detected
 
 GOBST-0 = Unobstructed
