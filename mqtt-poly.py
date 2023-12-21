@@ -988,7 +988,7 @@ class MQratgdo(udi_interface.Node):
     def __init__(self, polyglot, primary, address, name, device):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
-        self.cmd_topic = device["cmd_topic"] + "/command/"
+        self.cmd_topic = device["cmd_topic"] + "/command"
         self.on = False
         self.motion = False
 
@@ -1025,25 +1025,25 @@ class MQratgdo(udi_interface.Node):
             LOGGER.warn(f"Unable to handle data for topic {topic}")
 
     def lt_on(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "light/on")
+        self.controller.mqtt_pub(self.cmd_topic, "/light/on")
 
     def lt_off(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "light/off")
+        self.controller.mqtt_pub(self.cmd_topic, "/light/off")
 
     def dr_open(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "door/open")
+        self.controller.mqtt_pub(self.cmd_topic, "/door/open")
 
     def dr_close(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "door/close")
+        self.controller.mqtt_pub(self.cmd_topic, "/door/close")
 
     def dr_stop(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "door/stop")
+        self.controller.mqtt_pub(self.cmd_topic, "/door/stop")
 
     def lk_lock(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "lock/lock")
+        self.controller.mqtt_pub(self.cmd_topic, "/lock/lock")
 
     def lk_unlock(self, command):
-        self.controller.mqtt_pub(self.cmd_topic, "lock/unlock")
+        self.controller.mqtt_pub(self.cmd_topic, "/lock/unlock")
 
     def query(self, command=None):
         self.reportDrivers()
