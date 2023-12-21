@@ -185,8 +185,8 @@ ST-RATGDO-GV2-NAME = Motion
 ST-RATGDO-GV3-NAME = Lock
 ST-RATGDO-GV4-NAME = Obstruction
 
-GONLINE-0 = Offline
-GONLINE-1 = Online
+GAVAIL-0 = Offline
+GAVAIL-1 = Online
 
 GLIGHT-0 = Off
 GLIGHT-1 = On
@@ -200,7 +200,7 @@ GDOOR-4 = Closing
 GMOTION-0 = Clear
 GMOTION-1 = Detected
 
-GOBST-0 = Unobstructed
+GOBST-0 = Clear
 GOBST-1 = Obstructed
 
 GLOCK-0 = Unlocked
