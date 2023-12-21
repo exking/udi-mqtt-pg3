@@ -182,7 +182,7 @@ class Controller(udi_interface.Node):
                 if not self.poly.getNode(address):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQratgdo(self.poly, self.address, address, name, dev))
-                    status_topics_base = [dev["status_topic"]] + "/status/"
+                    status_topics_base = dev["status_topic"] + "/status/"
                     status_topics = [status_topics_base + "availability",
                                      status_topics_base + "light",
                                      status_topics_base + "door",
@@ -989,8 +989,6 @@ class MQratgdo(udi_interface.Node):
         super().__init__(polyglot, primary, address, name)
         self.controller = self.poly.getNode(self.primary)
         self.cmd_topic = device["cmd_topic"] + "/command/"
-        self.on = False
-        self.motion = False
 
     def updateInfo(self, payload, topic: str):
         topic_suffix = topic.split('/')[-1]
