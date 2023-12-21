@@ -136,7 +136,7 @@ FLAG-12 = ---
 
 # rgbw srip
 ND-MQRGBW-NAME = MQTT RGBW Strip
-ND-MQSENS-ICON = GenericCtl
+ND-MQRGBW-ICON = GenericCtl
 
 ST-STRIP-GV0-NAME = OnOff
 ST-STRIP-GV1-NAME = Brightness
@@ -158,4 +158,51 @@ CMDP-STRIPI-NAME = Brightness
 CMDP-STRIPP-NAME = Program
 
 PGM-CMD-SETRGBW-FMT = /STRIPR// Red ${v}/ /STRIPG// Green ${v}/ /STRIPB// Blue ${v}/ /STRIPW// White ${v}/ /STRIPI// Brightness ${v}/ /STRIPP// Program ${v}/
+
+# ratgdo garage
+ND-MQRATGDO-NAME = MQTT ratgdo garage
+ND-MQRATGDO-ICON = GenericRspCtl
+
+CMD-RATGDO-QUERY-NAME = Query
+CMD-RATGDO-LIGHT-NAME = Light
+CMD-RATGDO-DOOR-NAME = Door
+CMD-RATGDO-LOCK-NAME = Lock
+
+CMD-RATGDO-DON-NAME = On
+CMD-RATGDO-DOF-NAME = Off
+
+CMD-RATGDO-OPEN-NAME = Open
+CMD-RATGDO-CLOSE-NAME = Close
+CMD-RATGDO-STOP-NAME = Stop
+
+CMD-RATGDO-LOCK-NAME = Lock
+CMD-RATGDO-UNLOCK-NAME = Unlock
+
+ST-RATGDO-ST-NAME = Availability
+ST-RATGDO-GV0-NAME = Light
+ST-RATGDO-GV1-NAME = Door
+ST-RATGDO-GV2-NAME = Motion
+ST-RATGDO-GV3-NAME = Lock
+ST-RATGDO-GV4-NAME = Obstruction
+
+GAVAIL-0 = Offline
+GAVAIL-1 = Online
+
+GLIGHT-0 = Off
+GLIGHT-1 = On
+
+GDOOR-0 = Closed
+GDOOR-1 = Open
+GDOOR-2 = Opening
+GDOOR-3 = Stopped
+GDOOR-4 = Closing
+
+GMOTION-0 = Clear
+GMOTION-1 = Detected
+
+GOBST-0 = Clear
+GOBST-1 = Obstructed
+
+GLOCK-0 = Unlocked
+GLOCK-1 = Locked
 

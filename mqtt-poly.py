@@ -178,6 +178,18 @@ class Controller(udi_interface.Node):
                     LOGGER.info("Adding {} {}".format(dev["type"], name))
                     self.poly.addNode(MQFan(self.poly, self.address, address, name, dev))
                     self._add_status_topics(dev, [dev["status_topic"]])
+            elif dev["type"] == "ratgdo":
+                if not self.poly.getNode(address):
+                    LOGGER.info("Adding {} {}".format(dev["type"], name))
+                    self.poly.addNode(MQratgdo(self.poly, self.address, address, name, dev))
+                    status_topics_base = dev["status_topic"] + "/status/"
+                    status_topics = [status_topics_base + "availability",
+                                     status_topics_base + "light",
+                                     status_topics_base + "door",
+                                     status_topics_base + "motion",
+                                     status_topics_base + "lock",
+                                     status_topics_base + "obstruction"]
+                    self._add_status_topics(dev, status_topics)
             else:
                 LOGGER.error("Device type {} is not yet supported".format(dev["type"]))
         LOGGER.info("Done adding nodes, connecting to MQTT broker...")
@@ -969,6 +981,83 @@ class MQRGBWstrip(udi_interface.Node):
     id = "MQRGBW"
 
     commands = {"QUERY": query, "DON": led_on, "DOF": led_off, "SETRGBW": rgbw_set}
+
+# Class for Ratgdo Garage door opener for MYQ replacement
+# Able to control door, light, lock and get status of same as well as motion, obstruction
+class MQratgdo(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name, device):
+        super().__init__(polyglot, primary, address, name)
+        self.controller = self.poly.getNode(self.primary)
+        self.cmd_topic = device["cmd_topic"] + "/command/"
+
+    def updateInfo(self, payload, topic: str):
+        topic_suffix = topic.split('/')[-1]
+        if topic_suffix == "availability":
+            value = int( payload == "online" )
+            self.setDriver("ST", value)
+        elif topic_suffix == "light":
+            value = int( payload == "on" )
+            self.setDriver("GV0", value)
+        elif topic_suffix == "door":
+            if payload == "open":
+                value = 1
+            elif payload == "opening":
+                value = 2
+            elif payload == "stopped":
+                value = 3
+            elif payload == "closing":
+                value = 4
+            else:
+                value = 0
+            self.setDriver("GV1", value)
+        elif topic_suffix == "motion":
+            value = int( payload == "detected" )
+            self.setDriver("GV2", value)
+        elif topic_suffix == "lock":
+            value = int( payload == "locked" )
+            self.setDriver("GV3", value)
+        elif topic_suffix == "obstruction":
+            value = int( payload == "obstructed" )
+            self.setDriver("GV4", value)
+        else:
+            LOGGER.warn(f"Unable to handle data for topic {topic}")
+
+    def lt_on(self, command):
+        self.controller.mqtt_pub(self.cmd_topic + "light", "on" )
+
+    def lt_off(self, command):
+        self.controller.mqtt_pub(self.cmd_topic + "light", "off" )
+
+    def dr_open(self, command):
+        self.controller.mqtt_pub(self.cmd_topic + "door", "open")
+
+    def dr_close(self, command):
+        self.controller.mqtt_pub(self.cmd_topic + "door", "close")
+
+    def dr_stop(self, command):
+        self.controller.mqtt_pub(self.cmd_topic + "door" , "stop")
+
+    def lk_lock(self, command):
+        self.controller.mqtt_pub(self.cmd_topic + "lock" , "lock")
+
+    def lk_unlock(self, command):
+        self.controller.mqtt_pub(self.cmd_topic + "lock" , "unlock")
+
+    def query(self, command=None):
+        self.reportDrivers()
+
+    drivers = [
+        {"driver": "ST", "value": 0, "uom": 2},
+        {"driver": "GV0", "value": 0, "uom": 2},
+        {"driver": "GV1", "value": 0, "uom": 25},
+        {"driver": "GV2", "value": 0, "uom": 2},
+        {"driver": "GV3", "value": 0, "uom": 2},
+        {"driver": "GV4", "value": 0, "uom": 2},
+    ]
+
+    id = "MQRATGDO"
+
+    commands = {"QUERY": query, "DON": lt_on, "DOF": lt_off, "OPEN" : dr_open, "CLOSE" : dr_close, "STOP" : dr_stop, "LOCK" : lk_lock, "UNLOCK" : lk_unlock}
 
 
 if __name__ == "__main__":
